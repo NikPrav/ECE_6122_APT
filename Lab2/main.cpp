@@ -133,6 +133,7 @@ int main()
 
     double xSep, ySep, q, originX, originY;
     time_t start, end;
+    int totalPoints;
 
     // Getting max allowed threads
     unsigned int nThreads = std::thread::hardware_concurrency();
@@ -186,6 +187,7 @@ int main()
             {
                 rows = stoi(inputTokens[0]);
                 cols = stoi(inputTokens[1]);
+                totalPoints = rows * cols;
             }
             else
             {
@@ -196,7 +198,7 @@ int main()
         }
 
         // Generating Matrix
-        vector<vector<ECE_ElectricField>> chargeMatrix(rows, vector<ECE_ElectricField>(cols));
+        vector<ECE_ElectricField> chargeMatrix(totalPoints);
 
         cout << "Please enter the x and y separation distances in meters: ";
         getline(cin, inputString);
@@ -295,8 +297,8 @@ int main()
                             inputSanitary = false;
                         }
                     }
-                    chargeMatrix[i][j].setLocation(i * xSep + originX, j * ySep + originY, 0);
-                    chargeMatrix[i][j].setCharge(q);
+                    chargeMatrix[i * rows + j].setLocation(i * xSep + originX, j * ySep + originY, 0);
+                    chargeMatrix[i * rows + j].setCharge(q);
                 }
             }
 
@@ -309,6 +311,7 @@ int main()
                 continue;
             }
             auto start1 = chrono::high_resolution_clock::now();
+            // auto stop1 = chrono::high_resolution_clock::now();
 
             // calculating the electric field
             // Multithreading with pragma
@@ -321,39 +324,38 @@ int main()
 #pragma omp parallel num_threads(nThreads)
             {
 
-#pragma omp barrier
-                start1 = chrono::high_resolution_clock::now();
-
-#pragma omp for collapse(2) reduction(+ : totalEx, totalEy, totalEz) schedule(static, loopsPerThread)
-                for (int i = 0; i < rows; ++i)
+#pragma omp master
                 {
-                    for (int j = 0; j < cols; ++j)
-                    {
-                        // Calculating Field
-                        // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
-                        chargeMatrix[i][j].computeFieldAt(xLoc, yLoc, zLoc);
-                        // chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
-                        // totalEx += Ex;
-                        // totalEy += Ey;
-                        // totalEz += Ez;
-                        // printf("i = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
-                    }
+                    start1 = chrono::high_resolution_clock::now();
+                }
+                
+
+#pragma omp for schedule(static, loopsPerThread)
+                for (int i = 0; i < totalPoints; ++i)
+                {
+
+                    // Calculating Field
+                    // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
+                    chargeMatrix[i].computeFieldAt(xLoc, yLoc, zLoc);
+                    // chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
+                    // totalEx += Ex;
+                    // totalEy += Ey;
+                    // totalEz += Ez;
+                    // printf("i = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
                 }
                 // #pragma omp barrier
             }
 
             // Adding the EField calculated by the threads
 
-            for (int i = 0; i < rows; ++i)
+            for (int i = 0; i < totalPoints; ++i)
             {
-                for (int j = 0; j < cols; ++j)
-                {
-                    // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
-                    chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
-                    totalEx += Ex;
-                    totalEy += Ey;
-                    totalEz += Ez;
-                }
+
+                // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
+                chargeMatrix[i].getElectricField(Ex, Ey, Ez);
+                totalEx += Ex;
+                totalEy += Ey;
+                totalEz += Ez;
             }
 
             // Stop the clock when execution is finished
