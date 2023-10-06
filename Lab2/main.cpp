@@ -316,7 +316,7 @@ int main()
             // #pragma omp parallel for num_threads(nThreads) collapse(2)
             double totalEx = 0, totalEy = 0, totalEz = 0, Ex, Ey, Ez;
 
-int loopsPerThread = ceil((double)rows * cols / (nThreads));
+            int loopsPerThread = ceil((double)rows * cols / (nThreads));
 
 #pragma omp parallel num_threads(nThreads)
             {
@@ -332,25 +332,29 @@ int loopsPerThread = ceil((double)rows * cols / (nThreads));
                         // Calculating Field
                         // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
                         chargeMatrix[i][j].computeFieldAt(xLoc, yLoc, zLoc);
-                        chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
-                        totalEx += Ex;
-                        totalEy += Ey;
-                        totalEz += Ez;
+                        // chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
+                        // totalEx += Ex;
+                        // totalEy += Ey;
+                        // totalEz += Ez;
                         // printf("i = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
                     }
                 }
-// #pragma omp barrier
+                // #pragma omp barrier
             }
 
             // Adding the EField calculated by the threads
 
-            // for (int i = 0; i < rows; ++i)
-            // {
-            //     for (int j = 0; j < cols; ++j)
-            //     {
-            //         // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
-            //     }
-            // }
+            for (int i = 0; i < rows; ++i)
+            {
+                for (int j = 0; j < cols; ++j)
+                {
+                    // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
+                    chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
+                    totalEx += Ex;
+                    totalEy += Ey;
+                    totalEz += Ez;
+                }
+            }
 
             // Stop the clock when execution is finished
             auto stop1 = chrono::high_resolution_clock::now();
