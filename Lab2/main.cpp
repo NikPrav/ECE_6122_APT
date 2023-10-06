@@ -315,22 +315,23 @@ int main()
             // Multithreading with pragma
             // ensuring that both loops are multithreaded
             // #pragma omp parallel for num_threads(nThreads) collapse(2)
-            double totalEx = 0, totalEy = 0, totalEz = 0, Ex, Ey, Ez;
+            double totalEx = 0, totalEy = 0, totalEz = 0;
+            int totalPoints = rows * cols;
 
-            int loopsPerThread = ceil((double)rows * cols / (nThreads));
+            int loopsPerThread = ceil((double)totalPoints / (nThreads));
 
 #pragma omp parallel num_threads(nThreads)
             {
+                double Ex, Ey, Ez;
 
 #pragma omp master
-
 
                 {
                     start1 = chrono::high_resolution_clock::now();
                 }
 
 #pragma omp for reduction(+ : totalEx, totalEy, totalEz) schedule(static)
-                for (int i = 0; i < rows * cols; ++i)
+                for (int i = 0; i < totalPoints; ++i)
                 {
 
                     // Calculating Field
@@ -344,7 +345,7 @@ int main()
                 }
 
 #pragma omp master
-                
+
                 {
                     stop1 = chrono::high_resolution_clock::now();
                 }
