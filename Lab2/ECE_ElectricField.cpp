@@ -31,12 +31,12 @@ void ECE_ElectricField::computeFieldAt(double x_in, double y_in, double z_in)
 
     // Calculating Euler's Distance
     dist = std::sqrt((x_in - x) * (x_in - x) + (y_in - y) * (y_in - y) + (z_in - z) * (z_in - z));
-    dist = dist * dist * dist;
+    k = k * q / (dist * dist * dist);
 
     // Using Euler's formula for EField calculation for vectors
-    Ex = (k * q) * ((x_in - x) / dist);
-    Ey = (k * q) * ((y_in - y) / dist);
-    Ez = (k * q) * ((z_in - z) / dist);
+    Ex = (k) * ((x_in - x));
+    Ey = (k) * ((y_in - y));
+    Ez = (k) * ((z_in - z));
     // }
 }
 
