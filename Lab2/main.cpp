@@ -196,7 +196,7 @@ int main()
         }
 
         // Generating Matrix
-        vector<vector<ECE_ElectricField>> chargeMatrix(rows, vector<ECE_ElectricField>(cols));
+        vector<ECE_ElectricField> chargeMatrix(rows * cols);
 
         cout << "Please enter the x and y separation distances in meters: ";
         getline(cin, inputString);
@@ -295,8 +295,8 @@ int main()
                             inputSanitary = false;
                         }
                     }
-                    chargeMatrix[i][j].setLocation(i * xSep + originX, j * ySep + originY, 0);
-                    chargeMatrix[i][j].setCharge(q);
+                    chargeMatrix[i * rows + j].setLocation(i * xSep + originX, j * ySep + originY, 0);
+                    chargeMatrix[i * rows + j].setCharge(q);
                 }
             }
 
@@ -309,6 +309,7 @@ int main()
                 continue;
             }
             auto start1 = chrono::high_resolution_clock::now();
+            auto stop1 = chrono::high_resolution_clock::now();
 
             // calculating the electric field
             // Multithreading with pragma
@@ -316,30 +317,38 @@ int main()
             // #pragma omp parallel for num_threads(nThreads) collapse(2)
             double totalEx = 0, totalEy = 0, totalEz = 0, Ex, Ey, Ez;
 
-int loopsPerThread = ceil((double)rows * cols / (nThreads));
+            int loopsPerThread = ceil((double)rows * cols / (nThreads));
 
 #pragma omp parallel num_threads(nThreads)
             {
 
-#pragma omp barrier
-                start1 = chrono::high_resolution_clock::now();
+#pragma omp master
 
-#pragma omp for collapse(2) reduction(+ : totalEx, totalEy, totalEz) schedule(static, loopsPerThread)
-                for (int i = 0; i < rows; ++i)
+
                 {
-                    for (int j = 0; j < cols; ++j)
-                    {
-                        // Calculating Field
-                        // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
-                        chargeMatrix[i][j].computeFieldAt(xLoc, yLoc, zLoc);
-                        chargeMatrix[i][j].getElectricField(Ex, Ey, Ez);
-                        totalEx += Ex;
-                        totalEy += Ey;
-                        totalEz += Ez;
-                        // printf("i = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
-                    }
+                    start1 = chrono::high_resolution_clock::now();
                 }
-// #pragma omp barrier
+
+#pragma omp for reduction(+ : totalEx, totalEy, totalEz) schedule(static)
+                for (int i = 0; i < rows * cols; ++i)
+                {
+
+                    // Calculating Field
+                    // chargeMatrix[i][j].setLocation(j*xSep + originX, i*ySep + originY, 0);
+                    chargeMatrix[i].computeFieldAt(xLoc, yLoc, zLoc);
+                    chargeMatrix[i].getElectricField(Ex, Ey, Ez);
+                    totalEx += Ex;
+                    totalEy += Ey;
+                    totalEz += Ez;
+                    // printf("i = %d, j= %d, threadId = %d \n", i, j, omp_get_thread_num());
+                }
+
+#pragma omp master
+                
+                {
+                    stop1 = chrono::high_resolution_clock::now();
+                }
+                // auto stop1 = chrono::high_resolution_clock::now();
             }
 
             // Adding the EField calculated by the threads
@@ -353,7 +362,7 @@ int loopsPerThread = ceil((double)rows * cols / (nThreads));
             // }
 
             // Stop the clock when execution is finished
-            auto stop1 = chrono::high_resolution_clock::now();
+            // auto stop1 = chrono::high_resolution_clock::now();
 
             cout << "The electric field at (" << xLoc << "," << yLoc
                  << "," << zLoc << ") in V/m is \n";
@@ -382,14 +391,12 @@ int loopsPerThread = ceil((double)rows * cols / (nThreads));
                 // }
                 break;
             }
-
         } while (true);
 
         if (!inputString.compare("N"))
         {
             break;
         }
-
     } while (true);
 
     // Joining Threads after excecution
